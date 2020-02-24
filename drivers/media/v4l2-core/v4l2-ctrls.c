@@ -312,6 +312,9 @@ const char * const *v4l2_ctrl_get_menu(u32 id)
 	static const char * const header_mode[] = {
 		"Separate Buffer",
 		"Joined With 1st Frame",
+#ifdef CONFIG_ARCH_SDM845
+		"Joined with I Frame",
+#endif
 		NULL,
 	};
 	static const char * const multi_slice[] = {
