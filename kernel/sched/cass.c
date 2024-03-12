@@ -125,12 +125,14 @@ static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync)
 		/* Use the free candidate slot for @curr */
 		struct cass_cpu_cand *curr = &cands[cidx];
 		struct cpuidle_state *idle_state;
+		struct rq *rq = cpu_rq(cpu);
 
 		/*
 		 * Check if this CPU is idle or only has SCHED_IDLE tasks. For
-		 * sync wakes, always treat the current CPU as idle.
+		 * sync wakes, treat the current CPU as idle if @current is the
+		 * only running task.
 		 */
-		if ((sync && cpu == smp_processor_id()) ||
+		if ((sync && cpu == smp_processor_id() && rq->nr_running == 1) ||
 		    available_idle_cpu(cpu) || idle_cpu(cpu)) {
 			/* Discard any previous non-idle candidate */
 			if (!has_idle)
@@ -141,7 +143,7 @@ static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync)
 			curr->exit_lat = 1;
 
 			/* Add on the actual idle exit latency, if any */
-			idle_state = idle_get_state(cpu_rq(cpu));
+			idle_state = idle_get_state(rq);
 			if (idle_state)
 				curr->exit_lat += idle_state->exit_latency;
 		} else {
