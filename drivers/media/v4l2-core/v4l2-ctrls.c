@@ -202,6 +202,9 @@ const char * const *v4l2_ctrl_get_menu(u32 id)
 		"Variable Bitrate",
 		"Constant Bitrate",
 		"Maximum Bitrate",
+#ifdef CONFIG_ARCH_SDM845
+		"RC OFF",
+#endif
 		"CBR VFR",
 		"MBR VFR",
 		"Constant Quality",
