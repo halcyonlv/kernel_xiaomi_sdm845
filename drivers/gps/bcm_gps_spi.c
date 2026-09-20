@@ -242,12 +242,18 @@ static ssize_t bcm_4775_nstandby_store(struct device *dev,
 	struct spi_device *spi = to_spi_device(dev);
 	struct bcm_spi_priv *priv = (struct bcm_spi_priv *)spi_get_drvdata(spi);
 
+	if (!priv)
+		return -ENODEV;
+
 	pr_err("[SSPBBD} bcm_4775_nstandby, buf is %s\n", buf);
 
-	if (!strncmp("0", buf, 1))
+	if (!strncmp("0", buf, 1)) {
 		gpio_set_value(priv->nstandby, 0);
-	else
+		if (priv->serial_wq)
+			flush_workqueue(priv->serial_wq);
+	} else {
 		gpio_set_value(priv->nstandby, 1);
+	}
 	return count;
 }
 
@@ -594,8 +600,16 @@ static bool bcm477x_hello(struct bcm_spi_priv *priv)
 {
 	int count = 0, retries = 0;
 
+	if (!priv || (priv->nstandby >= 0 && !gpio_get_value(priv->nstandby)))
+		return false;
+
 	gpio_set_value(priv->mcu_req, 1);
 	while (!gpio_get_value(priv->mcu_resp)) {
+		if (priv->nstandby >= 0 && !gpio_get_value(priv->nstandby)) {
+			gpio_set_value(priv->mcu_req, 0);
+			return false;
+		}
+
 		if (count++ > 100) {
 			gpio_set_value(priv->mcu_req, 0);
 			return false;
@@ -671,6 +685,16 @@ static int bcm_spi_sync(struct bcm_spi_priv *priv, void *tx_buf,
 	struct spi_transfer xfer;
 	int ret;
 
+	if (!priv || !priv->spi) {
+		pr_err_ratelimited("[SSPBBD]: spi device is null!\n");
+		return -ENODEV;
+	}
+
+	if (priv->nstandby >= 0 && !gpio_get_value(priv->nstandby)) {
+		pr_err_ratelimited("[SSPBBD]: gps is in standby mode, aborting spi transfer\n");
+		return -ENODEV;
+	}
+
 	/* Init */
 	spi_message_init(&msg);
 	memset(&xfer, 0, sizeof(xfer));
@@ -739,6 +763,8 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 			unsigned char *data_p = rx->data + strm->pckt_len;
 
 			Nread = bcm_ssi_get_len(strm->ctrl_byte, rx->data);
+			if (Nread > MAX_SPI_FRAME_LEN - strm->ctrl_len)
+				Nread = 0;
 
 			if (Mwrite < Nread) {
 				/* Call BBD */
@@ -749,7 +775,7 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 			}
 
 			/* Call BBD */
-			if (bytes_to_write != 0)
+			if (bytes_to_write != 0 && Nread > 0)
 				bbd_parse_asic_data(data_p, Nread, NULL, priv);
 
 #ifdef CONFIG_TRANSFER_STAT
@@ -760,8 +786,11 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 
 		// -- if ( strm->ctrl_byte & SSI_FLOW_CONTROL_ENABLED )
 		if (strm->fc_len != 0) {
-			Bwritten = bcm_ssi_get_len(strm->ctrl_byte,
-			&rx->data[strm->pckt_len + Mwrite]);
+			if (strm->pckt_len + Mwrite < MAX_SPI_FRAME_LEN)
+				Bwritten = bcm_ssi_get_len(strm->ctrl_byte,
+					&rx->data[strm->pckt_len + Mwrite]);
+			else
+				Bwritten = 0;
 
 			if (Mwrite != Bwritten) {
 				// ++ Calculate fc retries
@@ -773,6 +802,7 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 					pr_err("[SSPBBD]: %s @ FC error %d\n",
 						__func__,
 						ssi_tx_fc_retry_errors-1);
+					ret = -EIO;
 					break;
 				}
 			}
@@ -788,6 +818,9 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 		}
 
 	} while (--retry_ctr > 0);
+
+	if (strm->fc_len != 0 && n != 0 && ret == 0)
+		ret = -EIO;
 
 #ifdef CONFIG_TRANSFER_STAT
 	bcm_ssi_calc_trans_stat(&priv->trans_stat[0], length);
@@ -921,10 +954,19 @@ static void bcm_rxtx_work(struct work_struct *work)
 {
 	struct bcm_spi_priv *priv = container_of(work,
 		struct bcm_spi_priv, rxtx_work);
-	struct circ_buf *wr_circ = &priv->write_buf;
-	struct bcm_spi_strm_protocol *strm = &priv->tx_strm;
-	unsigned short rx_pckt_len = priv->rx_strm.pckt_len;
+	struct circ_buf *wr_circ;
+	struct bcm_spi_strm_protocol *strm;
+	unsigned short rx_pckt_len;
 
+	if (!priv || !priv->spi)
+		return;
+
+	if (priv->nstandby >= 0 && !gpio_get_value(priv->nstandby))
+		return;
+
+	wr_circ = &priv->write_buf;
+	strm = &priv->tx_strm;
+	rx_pckt_len = priv->rx_strm.pckt_len;
 
 	if (!bcm477x_hello(priv)) {
 		pr_err("[SSPBBD]: %s timeout!!\n", __func__);
@@ -936,6 +978,9 @@ static void bcm_rxtx_work(struct work_struct *work)
 	do {
 		int    ret;
 		size_t avail = 0;
+
+		if (priv->nstandby >= 0 && !gpio_get_value(priv->nstandby))
+			break;
 
 		/* Read first */
 		ret = gpio_get_value(priv->host_req);
