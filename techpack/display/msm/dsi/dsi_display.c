@@ -1316,10 +1316,38 @@ int dsi_display_set_power(struct drm_connector *connector,
 #endif
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
+#if defined(CONFIG_MACH_XIAOMI_SDM845)
+		/* Entering doze (AOD) from full power-on: tell clients
+		 * (touch/fingerprint) the panel is going into a low-power
+		 * state so they can switch to gesture-only sensing, same
+		 * as a full power-off. Without this, entering AOD never
+		 * notifies anyone and touch stays in full-power mode.
+		 */
+		if (display->panel->power_mode == SDE_MODE_DPMS_ON) {
+			event = DRM_BLANK_POWERDOWN;
+			g_notify_data.data = &event;
+			drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+		}
+#endif
 		rc = dsi_panel_set_lp1(display->panel);
+#if defined(CONFIG_MACH_XIAOMI_SDM845)
+		if (display->panel->power_mode == SDE_MODE_DPMS_ON)
+			drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+#endif
 		break;
 	case SDE_MODE_DPMS_LP2:
+#if defined(CONFIG_MACH_XIAOMI_SDM845)
+		if (display->panel->power_mode == SDE_MODE_DPMS_ON) {
+			event = DRM_BLANK_POWERDOWN;
+			g_notify_data.data = &event;
+			drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+		}
+#endif
 		rc = dsi_panel_set_lp2(display->panel);
+#if defined(CONFIG_MACH_XIAOMI_SDM845)
+		if (display->panel->power_mode == SDE_MODE_DPMS_ON)
+			drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+#endif
 		break;
 	case SDE_MODE_DPMS_ON:
 		if ((display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
