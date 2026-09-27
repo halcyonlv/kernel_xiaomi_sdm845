@@ -49,8 +49,7 @@ fi
 
 scm_version()
 {
-	local short
-	short=false
+	return
 
 	cd "$srctree"
 	if test -e .scmversion; then
