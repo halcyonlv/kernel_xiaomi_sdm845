@@ -4055,9 +4055,6 @@ static int smblib_cc2_sink_removal_exit(struct smb_charger *chg)
 		return 0;
 
 	chg->cc2_detach_wa_active = false;
-	chg->in_chg_lock = true;
-	cancel_work_sync(&chg->rdstd_cc2_detach_work);
-	chg->in_chg_lock = false;
 	smblib_reg_block_restore(chg, cc2_detach_settings);
 	return 0;
 }
@@ -6289,6 +6286,9 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 
 	usleep_range(10000, 11000);
 
+	if (!chg->cc2_detach_wa_active)
+		return;
+
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				 UFP_EN_CMD_BIT | DFP_EN_CMD_BIT,
 				 UFP_EN_CMD_BIT);
@@ -6298,6 +6298,9 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 	}
 
 	usleep_range(30000, 31000);
+
+	if (!chg->cc2_detach_wa_active)
+		return;
 
 	rc = smblib_read(chg, TYPE_C_STATUS_4_REG, &stat4);
 	if (rc < 0) {
@@ -6321,29 +6324,22 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 	}
 
 	smblib_dbg(chg, PR_MISC, "Bingo CC2 Removal detected\n");
-	chg->cc2_detach_wa_active = false;
 	rc = smblib_masked_write(chg, TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 						EXIT_SNK_BASED_ON_CC_BIT, 0);
-	smblib_reg_block_restore(chg, cc2_detach_settings);
 
-	/*
-	 * Mutex acquisition deadlock can happen while cancelling this work
-	 * during pd_hard_reset from the function smblib_cc2_sink_removal_exit
-	 * which is called in the same lock context that we try to acquire in
-	 * this work routine.
-	 * Check if this work is running during pd_hard_reset and skip holding
-	 * mutex if lock is already held.
-	 */
-	if (!chg->in_chg_lock)
-		mutex_lock(&chg->lock);
-	smblib_usb_typec_change(chg);
-	if (!chg->in_chg_lock)
-		mutex_unlock(&chg->lock);
+	mutex_lock(&chg->lock);
+	if (chg->cc2_detach_wa_active) {
+		chg->cc2_detach_wa_active = false;
+		smblib_reg_block_restore(chg, cc2_detach_settings);
+		smblib_usb_typec_change(chg);
+	}
+	mutex_unlock(&chg->lock);
 
 	return;
 
 rerun:
-	schedule_work(&chg->rdstd_cc2_detach_work);
+	if (chg->cc2_detach_wa_active)
+		schedule_work(&chg->rdstd_cc2_detach_work);
 }
 
 static void smblib_otg_oc_exit(struct smb_charger *chg, bool success)
