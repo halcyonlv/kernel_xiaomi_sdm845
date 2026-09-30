@@ -3046,8 +3046,9 @@ static bool handle_data_snk_ready(struct usbpd *pd, struct rx_msg *rx_msg)
 		kick_sm(pd, 150);
 		break;
 	case MSG_BATTERY_STATUS:
-		if (rx_msg->data_len != sizeof(pd->battery_sts_dobj)) {
+		if (rx_msg->data_len < sizeof(pd->battery_sts_dobj)) {
 			usbpd_err(&pd->dev, "Invalid bat sts dobj\n");
+			complete(&pd->is_ready);
 			break;
 		}
 		memcpy(&pd->battery_sts_dobj, rx_msg->payload,
@@ -3065,17 +3066,19 @@ static bool handle_ext_snk_ready(struct usbpd *pd, struct rx_msg *rx_msg)
 {
 	switch (PD_MSG_HDR_TYPE(rx_msg->hdr)) {
 	case MSG_SOURCE_CAPABILITIES_EXTENDED:
-		if (rx_msg->data_len != PD_SRC_CAP_EXT_DB_LEN) {
+		if (rx_msg->data_len < PD_SRC_CAP_EXT_DB_LEN) {
 			usbpd_err(&pd->dev, "Invalid src cap ext db\n");
+			complete(&pd->is_ready);
 			break;
 		}
 		memcpy(&pd->src_cap_ext_db, rx_msg->payload,
-			sizeof(pd->src_cap_ext_db));
+			min_t(size_t, rx_msg->data_len, sizeof(pd->src_cap_ext_db)));
 		complete(&pd->is_ready);
 		break;
 	case MSG_PPS_STATUS:
-		if (rx_msg->data_len != sizeof(pd->pps_status_db)) {
+		if (rx_msg->data_len < sizeof(pd->pps_status_db)) {
 			usbpd_err(&pd->dev, "Invalid pps status db\n");
+			complete(&pd->is_ready);
 			break;
 		}
 		memcpy(&pd->pps_status_db, rx_msg->payload,
@@ -3094,8 +3097,9 @@ static bool handle_ext_snk_ready(struct usbpd *pd, struct rx_msg *rx_msg)
 		complete(&pd->is_ready);
 		break;
 	case MSG_BATTERY_CAPABILITIES:
-		if (rx_msg->data_len != PD_BATTERY_CAP_DB_LEN) {
+		if (rx_msg->data_len < PD_BATTERY_CAP_DB_LEN) {
 			usbpd_err(&pd->dev, "Invalid battery cap db\n");
+			complete(&pd->is_ready);
 			break;
 		}
 		memcpy(&pd->battery_cap_db, rx_msg->payload,
@@ -3538,6 +3542,7 @@ static void handle_disconnect(struct usbpd *pd)
 	pd->peer_usb_comm = pd->peer_pr_swap = pd->peer_dr_swap = false;
 	memset(&pd->received_pdos, 0, sizeof(pd->received_pdos));
 	rx_msg_cleanup(pd);
+	complete(&pd->is_ready);
 
 	power_supply_set_property(pd->usb_psy,
 			POWER_SUPPLY_PROP_PD_IN_HARD_RESET, &val);
@@ -3625,6 +3630,7 @@ static void handle_hard_reset(struct usbpd *pd)
 	rx_msg_cleanup(pd);
 	reset_vdm_state(pd);
 	kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
+	complete(&pd->is_ready);
 
 	if (pd->current_pr == PR_SINK) {
 		usbpd_set_state(pd, PE_SNK_TRANSITION_TO_DEFAULT);
