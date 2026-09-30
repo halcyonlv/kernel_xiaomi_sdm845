@@ -467,7 +467,6 @@ struct smb_charger {
 	int			dc_input_current_now;
 #endif
 	bool			disable_stat_sw_override;
-	bool			in_chg_lock;
 	bool			fcc_stepper_enable;
 	bool			ufp_only_mode;
 
