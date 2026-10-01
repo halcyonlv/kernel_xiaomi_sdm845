@@ -889,6 +889,11 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 		pd->rdo = PD_RDO_FIXED(pdo_pos, 0, mismatch, 1, 1, curr / 10,
 				max_current / 10);
 	} else if (type == PD_SRC_PDO_TYPE_AUGMENTED) {
+		if (pd->pps_disabled) {
+			usbpd_err(&pd->dev, "APDO request rejected: PPS disabled\n");
+			return -ENOTSUPP;
+		}
+
 		if ((uv / 100000) > PD_APDO_MAX_VOLT(pdo) ||
 			(uv / 100000) < PD_APDO_MIN_VOLT(pdo) ||
 			(ua / 50000) > PD_APDO_MAX_CURR(pdo) || (ua < 0)) {
@@ -947,7 +952,7 @@ static int pd_eval_src_caps(struct usbpd *pd)
 			POWER_SUPPLY_PROP_PD_USB_SUSPEND_SUPPORTED, &val);
 
 	/* Check for PPS APDOs */
-	if (pd->spec_rev == USBPD_REV_30) {
+	if (!pd->pps_disabled && pd->spec_rev == USBPD_REV_30) {
 		for (i = 1; i < PD_MAX_DATA_OBJ; i++) {
 			if ((PD_SRC_PDO_TYPE(pd->received_pdos[i]) ==
 					PD_SRC_PDO_TYPE_AUGMENTED) &&
@@ -5032,6 +5037,10 @@ struct usbpd *usbpd_create(struct device *parent)
 
 	pd->pps_disabled = device_property_read_bool(parent,
 				"qcom,pps-disabled");
+#if defined(CONFIG_MACH_XIAOMI_SDM845)
+	/* Xiaomi SDM845 devices lack PPS hardware support and in-kernel periodic timers */
+	pd->pps_disabled = true;
+#endif
 	pd->current_pr = PR_NONE;
 	pd->current_dr = DR_NONE;
 	list_add_tail(&pd->instance, &_usbpd);
