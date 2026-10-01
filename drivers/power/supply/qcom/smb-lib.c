@@ -3694,7 +3694,7 @@ int smblib_set_prop_type_recheck(struct smb_charger *chg,
 				    const union power_supply_propval *val)
 {
 	if (val->intval == 0) {
-		cancel_delayed_work_sync(&chg->charger_type_recheck);
+		cancel_delayed_work(&chg->charger_type_recheck);
 		chg->recheck_charger = false;
 		chg->ignore_recheck_flag = false;
 	}
@@ -4591,7 +4591,7 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 						false, 0);
 #if defined(CONFIG_MACH_XIAOMI_SDM845)
 				vote(chg->awake_votable, CHG_AWAKE_VOTER, false, 0);
-				cancel_delayed_work_sync(&chg->charger_type_recheck);
+				cancel_delayed_work(&chg->charger_type_recheck);
 				chg->ignore_recheck_flag = false;
 #endif
 			}
@@ -4702,8 +4702,8 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 			pr_err("APSD disabled on vbus rising without PD\n");
 	} else {
 #if defined(CONFIG_MACH_XIAOMI_SDM845)
-		cancel_delayed_work_sync(&chg->typec_reenable_work);
-		cancel_delayed_work_sync(&chg->charger_type_recheck);
+		cancel_delayed_work(&chg->typec_reenable_work);
+		cancel_delayed_work(&chg->charger_type_recheck);
 		chg->ignore_recheck_flag = false;
 #endif
 		if (chg->fake_usb_insertion) {
@@ -5837,8 +5837,8 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 		return;
 
 #if defined(CONFIG_MACH_XIAOMI_SDM845)
-	cancel_delayed_work_sync(&chg->typec_reenable_work);
-	cancel_delayed_work_sync(&chg->cc_float_charge_work);
+	cancel_delayed_work(&chg->typec_reenable_work);
+	cancel_delayed_work(&chg->cc_float_charge_work);
 #endif
 
 	typec_mode = smblib_get_prop_typec_mode(chg);
@@ -5872,8 +5872,8 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 	} else if (chg->typec_present &&
 				chg->typec_mode == POWER_SUPPLY_TYPEC_NONE) {
 #if defined(CONFIG_MACH_XIAOMI_SDM845)
-		cancel_delayed_work_sync(&chg->charger_type_recheck);
-		flush_delayed_work(&chg->connector_health_work);
+		cancel_delayed_work(&chg->charger_type_recheck);
+		cancel_delayed_work(&chg->connector_health_work);
 		chg->ignore_recheck_flag = false;
 #endif
 		chg->typec_present = false;
