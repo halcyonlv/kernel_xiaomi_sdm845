@@ -101,7 +101,10 @@ done:
 static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync)
 {
 	/* Initialize @best such that @best always has a valid CPU at the end */
-	struct cass_cpu_cand cands[2], *best = cands;
+	struct cass_cpu_cand cands[2] = {
+		[0] = { .cpu = prev_cpu },
+		[1] = { .cpu = prev_cpu },
+	}, *best = cands;
 	int this_cpu = raw_smp_processor_id();
 #ifdef CONFIG_UCLAMP_TASK
 	unsigned long uc_min = uclamp_eff_value(p, UCLAMP_MIN);
@@ -117,17 +120,14 @@ static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync)
 	 * an RCU read lock, an RCU read lock isn't needed because we're not
 	 * preemptible and RCU-sched is unified with normal RCU. Therefore,
 	 * non-preemptible contexts are implicitly RCU-safe.
-	 *
-	 * Note: @curr->cpu must be initialized before this loop ends. This is
-	 * necessary to ensure @best->cpu contains a valid CPU upon returning;
-	 * otherwise, if only one CPU is allowed and it is skipped before
-	 * @curr->cpu is set, then @best->cpu will be garbage.
 	 */
 	for_each_cpu_and(cpu, &p->cpus_allowed, cpu_active_mask) {
 		/* Use the free candidate slot for @curr */
 		struct cass_cpu_cand *curr = &cands[cidx];
 		struct cpuidle_state *idle_state;
 		struct rq *rq = cpu_rq(cpu);
+
+		curr->cpu = cpu;
 
 		/* Get the maximum capacity of this CPU */
 		curr->cap_max = capacity_orig_of(cpu);
@@ -199,7 +199,6 @@ static int cass_best_cpu(struct task_struct *p, int prev_cpu, bool sync)
 		 * If @best == @curr then there's no need to compare them, but
 		 * cidx still needs to be changed to the other candidate slot.
 		 */
-		curr->cpu = cpu;
 		if (best == curr ||
 		    cass_cpu_better(curr, best, this_cpu, prev_cpu, sync)) {
 			best = curr;
@@ -221,12 +220,11 @@ static int cass_select_task_rq_fair(struct task_struct *p, int prev_cpu,
 		return prev_cpu;
 
 	/*
-	 * If there aren't any valid CPUs which are active, then just return the
-	 * first valid CPU since it's possible for certain types of tasks to run
-	 * on inactive CPUs.
+	 * If there aren't any valid CPUs which are active, then just return
+	 * the previous CPU to let the scheduler fallback placement handle it.
 	 */
 	if (unlikely(!cpumask_intersects(&p->cpus_allowed, cpu_active_mask)))
-		return cpumask_first(&p->cpus_allowed);
+		return prev_cpu;
 
 	/* cass_best_cpu() needs the task's utilization, so sync it up */
 	if (!((sd_flag & SD_BALANCE_FORK) || (wake_flags & SD_BALANCE_FORK)))
