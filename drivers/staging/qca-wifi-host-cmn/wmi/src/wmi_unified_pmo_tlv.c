@@ -955,13 +955,12 @@ static QDF_STATUS extract_gtk_rsp_event_tlv(wmi_unified_t wmi_handle,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	if (len < sizeof(WMI_GTK_OFFLOAD_STATUS_EVENT_fixed_param)) {
-		WMI_LOGE("Invalid length for GTK status");
-		return QDF_STATUS_E_INVAL;
-	}
-
 	fixed_param = (WMI_GTK_OFFLOAD_STATUS_EVENT_fixed_param *)
 		param_buf->fixed_param;
+	if (!fixed_param) {
+		WMI_LOGE("gtk fixed_param is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
 
 	if (fixed_param->vdev_id >= WLAN_UMAC_PSOC_MAX_VDEVS) {
 		wmi_err_rl("Invalid vdev_id %u", fixed_param->vdev_id);
