@@ -938,6 +938,8 @@ QDF_STATUS pmo_core_psoc_bus_suspend_req(struct wlan_objmgr_psoc *psoc,
 
 	psoc_ctx = pmo_psoc_get_priv(psoc);
 
+	pmo_core_update_wow_initial_wake_up(psoc_ctx, 0);
+
 	wow_mode_selected = pmo_core_is_wow_enabled(psoc_ctx);
 	pmo_debug("wow mode selected %d", wow_mode_selected);
 
