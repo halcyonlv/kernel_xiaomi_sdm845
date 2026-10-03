@@ -1280,6 +1280,7 @@ int wlan_hdd_bus_suspend_noirq(void)
 	return 0;
 
 resume_hif_noirq:
+	ucfg_pmo_psoc_clear_target_wake_up(hdd_ctx->psoc);
 	QDF_BUG(!hif_bus_resume_noirq(hif_ctx));
 
 done:
@@ -1354,6 +1355,8 @@ int wlan_hdd_bus_resume(void)
 		hdd_err("Failed hif bus resume");
 		goto out;
 	}
+
+	ucfg_pmo_psoc_clear_target_wake_up(hdd_ctx->psoc);
 
 	hif_system_pm_set_state_resuming(hif_ctx);
 
