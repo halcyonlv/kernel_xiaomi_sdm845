@@ -349,72 +349,77 @@
 			reg-names = "lpg-base", "lut-base";
 			#pwm-cells = <2>;
 			qcom,num-lpg-channels = <6>;
-			qcom,lut-patterns = <0 10 20 30 40 50 60 70 80 90 100
-						90 80 70 60 50 40 30 20 10 0>;
+			qcom,lut-patterns = <0 10 20 30 40 50 60 70 80 90 100>;
 
 			lpg1 {
 				qcom,lpg-chan-id = <1>;
 				qcom,ramp-step-ms = <100>;
-				qcom,ramp-pause-hi-count = <2>;
-				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-pause-hi-count = <0>;
+				qcom,ramp-pause-lo-count = <30>;
 				qcom,ramp-low-index = <0>;
-				qcom,ramp-high-index = <20>;
+				qcom,ramp-high-index = <10>;
 				qcom,ramp-from-low-to-high;
+				qcom,ramp-toggle;
 				qcom,ramp-pattern-repeat;
 			};
 
 			lpg2 {
 				qcom,lpg-chan-id = <2>;
 				qcom,ramp-step-ms = <100>;
-				qcom,ramp-pause-hi-count = <2>;
-				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-pause-hi-count = <0>;
+				qcom,ramp-pause-lo-count = <30>;
 				qcom,ramp-low-index = <0>;
-				qcom,ramp-high-index = <20>;
+				qcom,ramp-high-index = <10>;
 				qcom,ramp-from-low-to-high;
+				qcom,ramp-toggle;
 				qcom,ramp-pattern-repeat;
 			};
 
 			lpg3 {
 				qcom,lpg-chan-id = <3>;
 				qcom,ramp-step-ms = <100>;
-				qcom,ramp-pause-hi-count = <2>;
-				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-pause-hi-count = <0>;
+				qcom,ramp-pause-lo-count = <30>;
 				qcom,ramp-low-index = <0>;
-				qcom,ramp-high-index = <20>;
+				qcom,ramp-high-index = <10>;
 				qcom,ramp-from-low-to-high;
+				qcom,ramp-toggle;
 				qcom,ramp-pattern-repeat;
 			};
 
 			lpg4 {
 				qcom,lpg-chan-id = <4>;
 				qcom,ramp-step-ms = <100>;
-				qcom,ramp-pause-hi-count = <2>;
-				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-pause-hi-count = <0>;
+				qcom,ramp-pause-lo-count = <30>;
 				qcom,ramp-low-index = <0>;
-				qcom,ramp-high-index = <20>;
+				qcom,ramp-high-index = <10>;
 				qcom,ramp-from-low-to-high;
+				qcom,ramp-toggle;
 				qcom,ramp-pattern-repeat;
 			};
 
 			lpg5 {
 				qcom,lpg-chan-id = <5>;
 				qcom,ramp-step-ms = <100>;
-				qcom,ramp-pause-hi-count = <2>;
-				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-pause-hi-count = <0>;
+				qcom,ramp-pause-lo-count = <30>;
 				qcom,ramp-low-index = <0>;
-				qcom,ramp-high-index = <20>;
+				qcom,ramp-high-index = <10>;
 				qcom,ramp-from-low-to-high;
+				qcom,ramp-toggle;
 				qcom,ramp-pattern-repeat;
 			};
 
 			lpg6 {
 				qcom,lpg-chan-id = <6>;
 				qcom,ramp-step-ms = <100>;
-				qcom,ramp-pause-hi-count = <2>;
-				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-pause-hi-count = <0>;
+				qcom,ramp-pause-lo-count = <30>;
 				qcom,ramp-low-index = <0>;
-				qcom,ramp-high-index = <20>;
+				qcom,ramp-high-index = <10>;
 				qcom,ramp-from-low-to-high;
+				qcom,ramp-toggle;
 				qcom,ramp-pattern-repeat;
 			};
 		};
