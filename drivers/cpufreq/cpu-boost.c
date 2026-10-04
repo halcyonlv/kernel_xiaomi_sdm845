@@ -47,9 +47,9 @@ static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
 
-static bool input_boost_enabled;
+static bool input_boost_enabled = true;
 
-static unsigned int input_boost_ms = 40;
+static unsigned int input_boost_ms = 64;
 show_one(input_boost_ms);
 store_one(input_boost_ms);
 cpu_boost_attr_rw(input_boost_ms);
@@ -63,7 +63,7 @@ static bool sched_boost_active;
 
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
-#define MIN_INPUT_INTERVAL (150 * USEC_PER_MSEC)
+#define MIN_INPUT_INTERVAL (40 * USEC_PER_MSEC)
 
 static ssize_t store_input_boost_freq(struct kobject *kobj,
 				      struct kobj_attribute *attr,
@@ -343,6 +343,10 @@ static int cpu_boost_init(void)
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
+		if (cpu < 4)
+			s->input_boost_freq = 1228800;
+		else
+			s->input_boost_freq = 1056000;
 	}
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
 
