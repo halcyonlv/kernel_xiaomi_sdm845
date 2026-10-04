@@ -111,13 +111,16 @@ static int __tri_led_config_pwm(struct qpnp_led_dev *led,
 				struct pwm_setting *pwm)
 {
 	struct pwm_state pstate;
+	bool modulated = (pwm_get_output_type_supported(led->pwm_dev) &
+			  PWM_OUTPUT_MODULATED);
 	int rc;
 
 	pwm_get_state(led->pwm_dev, &pstate);
 	pstate.enabled = !!(pwm->duty_ns != 0);
 	pstate.period = pwm->period_ns;
 	pstate.duty_cycle = pwm->duty_ns;
-	pstate.output_type = led->led_setting.breath ?
+	pstate.output_type = (led->led_setting.breath ||
+			      (led->led_setting.blink && modulated)) ?
 		PWM_OUTPUT_MODULATED : PWM_OUTPUT_FIXED;
 	/* Use default pattern in PWM device */
 	pstate.output_pattern = NULL;
@@ -213,9 +216,11 @@ static int qpnp_tri_led_set(struct qpnp_led_dev *led)
 {
 	u64 on_ms, off_ms, period_ns, duty_ns;
 	enum led_brightness brightness = led->led_setting.brightness;
+	bool modulated = (pwm_get_output_type_supported(led->pwm_dev) &
+			  PWM_OUTPUT_MODULATED);
 	int rc = 0;
 
-	if (led->led_setting.blink) {
+	if (led->led_setting.blink && !modulated) {
 		on_ms = led->led_setting.on_ms;
 		off_ms = led->led_setting.off_ms;
 
@@ -224,6 +229,9 @@ static int qpnp_tri_led_set(struct qpnp_led_dev *led)
 
 		if (period_ns < duty_ns && duty_ns != 0)
 			period_ns = duty_ns + 1;
+	} else if (led->led_setting.blink && modulated) {
+		period_ns = led->pwm_setting.pre_period_ns;
+		duty_ns = period_ns;
 	} else {
 		/* Use initial period if no blinking is required */
 		period_ns = led->pwm_setting.pre_period_ns;
