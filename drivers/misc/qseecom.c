@@ -3798,7 +3798,8 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 		cmd_len = sizeof(struct qseecom_client_send_data_64bit_ireq);
 	}
 
-	if (!qseecom.whitelist_support || data->use_legacy_cmd)
+	if (!qseecom.whitelist_support || data->use_legacy_cmd ||
+	    data->client.app_arch == ELFCLASS32)
 		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND;
 	else
 		*(uint32_t *)cmd_buf = QSEOS_CLIENT_SEND_DATA_COMMAND_WHITELIST;
@@ -5302,7 +5303,8 @@ int qseecom_send_command(struct qseecom_handle *handle, void *send_buf,
 		perf_enabled = true;
 	}
 	if (!strcmp(data->client.app_name, "securemm") ||
-	    !strcmp(data->client.app_name, "slateapp")) {
+	    !strcmp(data->client.app_name, "slateapp") ||
+	    data->client.app_arch == ELFCLASS32) {
 		data->use_legacy_cmd = true;
 	}
 
