@@ -32,6 +32,7 @@
 
 #define pmo_fatal(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_PMO, params)
 #define pmo_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_PMO, params)
+#define pmo_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_PMO, params)
 #define pmo_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_PMO, params)
 #define pmo_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_PMO, params)
 #define pmo_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_PMO, params)
