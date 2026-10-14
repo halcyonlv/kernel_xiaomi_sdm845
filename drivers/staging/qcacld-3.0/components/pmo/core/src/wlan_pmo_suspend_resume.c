@@ -1443,7 +1443,7 @@ int pmo_core_psoc_is_target_wake_up_received(struct wlan_objmgr_psoc *psoc)
 
 	psoc_ctx = pmo_psoc_get_priv(psoc);
 	if (pmo_core_get_wow_initial_wake_up(psoc_ctx)) {
-		pmo_err("Target initial wake up received try again");
+		pmo_err_rl("Target initial wake up received try again");
 		ret = -EAGAIN;
 	}
 
