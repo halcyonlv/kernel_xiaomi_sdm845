@@ -171,6 +171,7 @@ int msm_vidc_query_ctrl(void *instance, struct v4l2_queryctrl *ctrl)
 		msm_vidc_ctrl_get_range(ctrl, &inst->capability.blur_height);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES:
+	case V4L2_CID_MPEG_VIDEO_B_FRAMES:
 		msm_vidc_ctrl_get_range(ctrl, &inst->capability.bframe);
 		break;
 	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB:
