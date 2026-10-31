@@ -746,8 +746,8 @@ static int qpnp_haptics_play(struct hap_chip *chip, bool enable)
 
 #if defined(CONFIG_MACH_XIAOMI_SDM845)
 		hrtimer_start(&chip->stop_timer,
-			ktime_set(40 / MSEC_PER_SEC,
-			(time_ms % MSEC_PER_SEC) * NSEC_PER_MSEC),
+			ktime_set(time_ms / MSEC_PER_SEC,
+			(time_ms ? (time_ms % MSEC_PER_SEC) : 40) * NSEC_PER_MSEC),
 			HRTIMER_MODE_REL);
 
 		rc = qpnp_haptics_auto_res_enable(chip, true);
@@ -1626,6 +1626,13 @@ static ssize_t qpnp_haptics_store_activate(struct device *dev,
 		atomic_set(&chip->state, 1);
 		schedule_work(&chip->haptics_work);
 	} else {
+		hrtimer_cancel(&chip->stop_timer);
+		if (is_sw_lra_auto_resonance_control(chip))
+			hrtimer_cancel(&chip->auto_res_err_poll_timer);
+		cancel_work_sync(&chip->haptics_work);
+
+		atomic_set(&chip->state, 0);
+		rc = qpnp_haptics_play_control(chip, HAP_STOP);
 		rc = qpnp_haptics_mod_enable(chip, false);
 		if (rc < 0) {
 			pr_err("Error in disabling module, rc=%d\n", rc);
@@ -2620,9 +2627,9 @@ static int qpnp_haptics_parse_dt(struct hap_chip *chip)
 	if (rc == -EINVAL)
 		rc = 0;
 
-	if (chip->play_mode == HAP_BUFFER)
-		rc = qpnp_haptics_parse_buffer_dt(chip);
-	else if (chip->play_mode == HAP_PWM)
+	rc = qpnp_haptics_parse_buffer_dt(chip);
+
+	if (chip->play_mode == HAP_PWM)
 		rc = qpnp_haptics_parse_pwm_dt(chip);
 
 	return rc;
